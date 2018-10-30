@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupGl() {
-        val renderer = CustomGlRenderer()
+        val renderer = CustomGlRenderer(applicationContext)
         glSurfaceView.setEGLContextClientVersion(2)
         glSurfaceView.preserveEGLContextOnPause = true
         glSurfaceView.setRenderer(renderer)
@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasGles20(): Boolean {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val deviceConfig = activityManager?.deviceConfigurationInfo
+        val deviceConfig = activityManager.deviceConfigurationInfo
         return deviceConfig.reqGlEsVersion >= 0x20000
     }
 }

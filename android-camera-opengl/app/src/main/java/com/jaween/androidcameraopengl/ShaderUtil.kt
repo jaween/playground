@@ -5,21 +5,26 @@ import android.util.Log
 
 object ShaderUtil {
     private val vertexShaderSource =
-            "uniform mat4 uMVPMatrix;                   \n" +
-            "attribute vec4 aPosition;                  \n" +
-            "attribute vec4 aColor;                     \n" +
-            "varying vec4 vColor;                       \n" +
-            "void main() {                              \n" +
-            "  vColor = aColor;                         \n" +
-            "  gl_Position = uMVPMatrix * aPosition;    \n" +
-            "}                                          \n"
+            "uniform mat4 uMVPMatrix;                           \n" +
+            "attribute vec4 aPosition;                          \n" +
+            "attribute vec4 aColor;                             \n" +
+            "attribute vec2 aTexCoord;                          \n" +
+            "varying vec4 vColor;                               \n" +
+            "varying vec2 vTexCoord;                            \n" +
+            "void main() {                                      \n" +
+            "  vColor = aColor;                                 \n" +
+            "  vTexCoord = aTexCoord;                           \n" +
+            "  gl_Position = uMVPMatrix * aPosition;            \n" +
+            "}                                                  \n"
 
     private val fragmentShaderSource =
-            "precision mediump float;                   \n" +
-            "varying vec4 vColor;                       \n" +
-            "void main() {                              \n" +
-            "  gl_FragColor = vColor;                   \n" +
-            "}                                          \n"
+            "precision mediump float;                           \n" +
+            "uniform sampler2D uTexture;                        \n" +
+            "varying vec4 vColor;                               \n" +
+            "varying vec2 vTexCoord;                            \n" +
+            "void main() {                                      \n" +
+            "  gl_FragColor = texture2D(uTexture, vTexCoord);   \n" +
+            "}                                                  \n"
 
     fun createShader(): Int {
         val vertexShader =
