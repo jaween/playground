@@ -7,12 +7,9 @@ object ShaderUtil {
     private val vertexShaderSource =
             "uniform mat4 uMVPMatrix;                           \n" +
             "attribute vec4 aPosition;                          \n" +
-            "attribute vec4 aColor;                             \n" +
             "attribute vec2 aTexCoord;                          \n" +
-            "varying vec4 vColor;                               \n" +
             "varying vec2 vTexCoord;                            \n" +
             "void main() {                                      \n" +
-            "  vColor = aColor;                                 \n" +
             "  vTexCoord = aTexCoord;                           \n" +
             "  gl_Position = aPosition;                         \n" +
             "}                                                  \n"
@@ -21,7 +18,6 @@ object ShaderUtil {
             "#extension GL_OES_EGL_image_external : require     \n" +
             "precision mediump float;                           \n" +
             "uniform samplerExternalOES uTexture;               \n" +
-            "varying vec4 vColor;                               \n" +
             "varying vec2 vTexCoord;                            \n" +
             "void main() {                                      \n" +
             "  gl_FragColor = texture2D(uTexture, vTexCoord);   \n" +
