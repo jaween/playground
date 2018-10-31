@@ -8,9 +8,7 @@ import android.opengl.GLUtils
 import android.opengl.Matrix
 import android.os.SystemClock
 import android.util.Log
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
+import java.nio.*
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -18,6 +16,7 @@ import javax.microedition.khronos.opengles.GL10
 class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
 
     private val bytesPerFloat = 4
+    private val bytesPerShort = 2
 
     private val modelMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
@@ -25,12 +24,9 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
     private val mvpMatrix = FloatArray(16)
 
     private val strideBytes = 9 * bytesPerFloat
-    private val positionOffset = 0
-    private val positionDataSize = 3
-    private val colorOffset = 3
-    private val colorDataSize = 4
-    private val texCoordOffset = 7
-    private val texCoordDataSize = 2
+    private val positionValuesPerStride = 3
+    private val colorValuesPerStride = 4
+    private val texCoordValuesPerStride = 2
 
     private var shaderProgram: Int = 0
     private var mvpMatrixHandle: Int = 0
@@ -40,7 +36,8 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
     private var textureHandle: Int = 0
     private var textureDataHandle: Int = 0
 
-    private var vbo: FloatBuffer? = null
+    private var vbo: Int = 0
+    private var ibo: Int = 0
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         Log.e("CustomGlRenderer", "Surface created")
@@ -75,36 +72,75 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         Matrix.rotateM(modelMatrix, 0, degrees, 0.0f, 1.0f, 0.0f)
 
         GLES20.glUseProgram(shaderProgram)
-        drawTriangle(vbo!!)
+        draw()
     }
 
     private fun setupVertices() {
-        val vertices = arrayOf(
+        val vertexData = floatArrayOf(
                 // X Y Z
                 // R G B A
                 // U V
-                0.0f, 0.5f, 0.0f,
+                // Bottom left
+                -1.0f, -1.0f, 0.0f,
                 1.0f, 0.0f, 0.0f, 1.0f,
-                0.5f, 1.0f,
+                0.0f, 1.0f,
 
-                0.5f, -0.5f, 0.0f,
+                // Top left
+                -1.0f, 1.0f, 0.0f,
                 0.0f, 0.0f, 1.0f, 1.0f,
+                0.0f, 0.0f,
+
+                // Top right
+                1.0f, 1.0f, 0.0f,
+                0.0f, 1.0f, 0.0f, 1.0f,
                 1.0f, 0.0f,
 
-                -0.5f, -0.5f, 0.0f,
+                // Bottom right
+                1.0f, -1.0f, 0.0f,
                 0.0f, 1.0f, 0.0f, 1.0f,
-                0.0f, 0.0f
+                1.0f, 1.0f
         )
+        val vertexBuffer: FloatBuffer = ByteBuffer
+                .allocateDirect(vertexData.size * bytesPerFloat)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+        vertexBuffer.put(vertexData).position(0)
 
-        vbo = ByteBuffer.allocateDirect(vertices.size * bytesPerFloat)
-                .order(ByteOrder.nativeOrder()).asFloatBuffer()
-        vertices.forEach { vbo?.put(it) }
+        val indexData = shortArrayOf(
+                0, 1, 3,
+                1, 2, 3
+        )
+        val indexBuffer: ShortBuffer = ByteBuffer
+                .allocateDirect(indexData.size * bytesPerShort)
+                .order(ByteOrder.nativeOrder())
+                .asShortBuffer()
+        indexBuffer.put(indexData).position(0)
+
+        val vboHandleArray = IntArray(1)
+        val iboHandleArray = IntArray(1)
+        GLES20.glGenBuffers(1, vboHandleArray, 0)
+        GLES20.glGenBuffers(1, iboHandleArray, 0)
+        vbo = vboHandleArray[0]
+        ibo = iboHandleArray[0]
+        if (vbo <= 0 || ibo <= 0) {
+            Log.e("CustomGlRenderer", "Error creating vertex buffers")
+            return
+        }
+
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo)
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, vertexBuffer.capacity() * bytesPerFloat, vertexBuffer, GLES20.GL_STATIC_DRAW)
+
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, ibo)
+        GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.capacity() * bytesPerShort, indexBuffer, GLES20.GL_STATIC_DRAW)
+
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0)
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0)
     }
 
     private fun setupCamera() {
         val eyeX = 0.0f
         val eyeY = 0.0f
-        val eyeZ = 1.5f
+        val eyeZ = 2.0f
         val lookX = 0.0f
         val lookY = 0.0f
         val lookZ = -5.0f
@@ -149,35 +185,34 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         return textureHandle[0]
     }
 
-    private fun drawTriangle(buffer: FloatBuffer) {
-        buffer.position(positionOffset)
+    private fun draw() {
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo)
+
         GLES20.glVertexAttribPointer(
                 positionHandle,
-                positionDataSize,
+                positionValuesPerStride,
                 GLES20.GL_FLOAT,
                 false,
                 strideBytes,
-                buffer)
+                0)
         GLES20.glEnableVertexAttribArray(positionHandle)
 
-        buffer.position(colorOffset)
         GLES20.glVertexAttribPointer(
                 colorHandle,
-                colorDataSize,
+                colorValuesPerStride,
                 GLES20.GL_FLOAT,
                 false,
                 strideBytes,
-                buffer)
+                positionValuesPerStride * bytesPerFloat)
         GLES20.glEnableVertexAttribArray(colorHandle)
 
-        buffer.position(texCoordOffset)
         GLES20.glVertexAttribPointer(
                 texCoordHandle,
-                texCoordDataSize,
+                texCoordValuesPerStride,
                 GLES20.GL_FLOAT,
                 false,
                 strideBytes,
-                buffer)
+                (positionValuesPerStride + colorValuesPerStride) * bytesPerFloat)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
@@ -188,7 +223,11 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureDataHandle)
         GLES20.glUniform1i(textureHandle, 0)
 
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 3)
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, ibo)
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_SHORT, 0)
+
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0)
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0)
     }
 
 }
