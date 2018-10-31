@@ -14,12 +14,13 @@ object ShaderUtil {
             "void main() {                                      \n" +
             "  vColor = aColor;                                 \n" +
             "  vTexCoord = aTexCoord;                           \n" +
-            "  gl_Position = uMVPMatrix * aPosition;            \n" +
+            "  gl_Position = aPosition;                         \n" +
             "}                                                  \n"
 
     private val fragmentShaderSource =
+            "#extension GL_OES_EGL_image_external : require     \n" +
             "precision mediump float;                           \n" +
-            "uniform sampler2D uTexture;                        \n" +
+            "uniform samplerExternalOES uTexture;               \n" +
             "varying vec4 vColor;                               \n" +
             "varying vec2 vTexCoord;                            \n" +
             "void main() {                                      \n" +

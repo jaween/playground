@@ -1,19 +1,17 @@
 package com.jaween.androidcameraopengl
 
-import android.content.Context
-import android.graphics.BitmapFactory
+import android.graphics.SurfaceTexture
 import android.opengl.GLES20
-import android.opengl.GLSurfaceView
-import android.opengl.GLUtils
 import android.opengl.Matrix
 import android.os.SystemClock
 import android.util.Log
-import java.nio.*
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import java.nio.ShortBuffer
 
 
-class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
+class CustomGlRenderer : RendererInterface {
 
     private val bytesPerFloat = 4
     private val bytesPerShort = 2
@@ -34,21 +32,29 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
     private var colorHandle: Int = 0
     private var texCoordHandle: Int = 0
     private var textureHandle: Int = 0
-    private var textureDataHandle: Int = 0
 
     private var vbo: Int = 0
     private var ibo: Int = 0
 
-    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+    private var surfaceWidth = 0
+    private var surfaceHeight = 0
+
+    override fun onSurfaceCreated(eglSurfaceTexture: SurfaceTexture, width: Int, height: Int) {
         Log.e("CustomGlRenderer", "Surface created")
+
+        surfaceWidth = width
+        surfaceHeight = height
+
         setupVertices()
-        setupCamera()
+        setupView()
         setupShader()
-        textureDataHandle = loadTexture()
     }
 
-    override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+    override fun onSurfaceChanged(eglSurfaceTexture: SurfaceTexture, width: Int, height: Int) {
         Log.e("CustomGlRenderer", "Surface changed $width x $height")
+
+        surfaceWidth = width
+        surfaceHeight = height
 
         GLES20.glViewport(0, 0, width, height)
         val ratio = width.toFloat() / height
@@ -61,17 +67,18 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
                 1.0f,
                 10.0f)
     }
-    ;
-    override fun onDrawFrame(gl: GL10?) {
-        GLES20.glClearColor(1f, 1f, 1f, 1f)
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
+    override fun onFrameAvailable(eglSurfaceTexture: SurfaceTexture) {
+        // Update view
         val time = SystemClock.elapsedRealtime()
         val degrees = (60 * time / 1000.0f) % 360.0f
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.rotateM(modelMatrix, 0, degrees, 0.0f, 1.0f, 0.0f)
 
-        GLES20.glUseProgram(shaderProgram)
+        // Updates the texture object with content from the stream
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        eglSurfaceTexture.updateTexImage()
+
         draw()
     }
 
@@ -137,7 +144,7 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0)
     }
 
-    private fun setupCamera() {
+    private fun setupView() {
         val eyeX = 0.0f
         val eyeY = 0.0f
         val eyeZ = 2.0f
@@ -157,35 +164,23 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
     private fun setupShader() {
         shaderProgram = ShaderUtil.createShader()
 
+        GLES20.glUseProgram(shaderProgram)
         mvpMatrixHandle = GLES20.glGetUniformLocation(shaderProgram, "uMVPMatrix")
         textureHandle = GLES20.glGetUniformLocation(shaderProgram, "uTexture")
 
         positionHandle = GLES20.glGetAttribLocation(shaderProgram, "aPosition")
         colorHandle  = GLES20.glGetAttribLocation(shaderProgram, "aColor")
         texCoordHandle = GLES20.glGetAttribLocation(shaderProgram, "aTexCoord")
-    }
-
-    private fun loadTexture(): Int {
-        val textureHandle = IntArray(1)
-        GLES20.glGenTextures(1, textureHandle, 0)
-        if (textureHandle[0] == 0) {
-            Log.e("CustomGlRenderer", "Error creating texture")
-        }
-
-        val options = BitmapFactory.Options()
-        options.inScaled = false
-        val bitmap = BitmapFactory.decodeResource(context.resources,
-                R.drawable.duck, options)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-        bitmap.recycle()
-
-        return textureHandle[0]
+        GlUtil.checkGlError("getLocations")
     }
 
     private fun draw() {
+        GLES20.glClearColor(1f, 1f, 1f, 1f)
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+
+        GLES20.glUseProgram(shaderProgram)
+        GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
+
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo)
 
         GLES20.glVertexAttribPointer(
@@ -219,10 +214,6 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureDataHandle)
-        GLES20.glUniform1i(textureHandle, 0)
-
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, ibo)
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_SHORT, 0)
 
@@ -230,4 +221,7 @@ class CustomGlRenderer(val context: Context) : GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0)
     }
 
+    override fun onSurfaceDestroyed(eglSurfaceTexture: SurfaceTexture) {
+        // Nothing to do
+    }
 }
