@@ -10,15 +10,55 @@
 #include "geometry.h"
 
 const float sphere_radius = 1.5;
-const float noise_amplitude = 0.2;
+const float noise_amplitude = 1.0;
+
+template <typename T> inline T lerp(const T& v0, const T& v1, float t) {
+  return v0 + (v1 - v0) * std::max(0.0f, std::min(1.0f, t));
+}
+
+float hash(const float n) {
+  float x = sin(n) * 43758.5453f;
+  return x - floor(x);
+}
+
+float noise(const Vec3f &x) {
+  Vec3f p(floor(x.x), floor(x.y), floor(x.z));
+  Vec3f f(x.x - p.x, x.y - p.y, x.z - p.z);
+  f = f * (f * (Vec3f(3.0f, 3.0f, 3.0f) - f * 2.0f));
+  float n = p * Vec3f(1.0f, 57.0f, 113.0f);
+  return lerp(lerp(lerp(hash(n + 0.0f), hash(n + 1.0f), f.x),
+                   lerp(hash(n + 57.0f), hash(n + 58.0f), f.x), f.y),
+              lerp(lerp(hash(n + 113.0f), hash(n + 114.0f), f.x),
+                   lerp(hash(n + 170.f), hash(n + 171.0f), f.x), f.y), f.z);
+}
+
+Vec3f rotate(const Vec3f &v) {
+  return Vec3f(Vec3f(0.0f, 0.8f, 0.6f) * v, Vec3f(-0.8f, 0.36f, -0.48f) * v, Vec3f(-0.6f, -0.48f, 0.64f) * v);
+}
+
+float fractal_brownian_motion(const Vec3f& x) {
+  Vec3f p = rotate(x);
+  float f = 0;
+  f += 0.5f * noise(p);
+  p = p * 2.32;
+  f += 0.25f * noise(p);
+  p = p * 3.03;
+  f += 0.125f * noise(p);
+  p = p * 3.03;
+  f += 0.0625f * noise(p);
+  return f / 0.9375;
+}
 
 float signed_distance(const Vec3f& p) {
-  Vec3f s = Vec3f(p).normalize(sphere_radius);
-  float displacement = sin(16 * s.x) * sin(16 * s.y) * sin(16 * s.z) * noise_amplitude;
+  float displacement = -fractal_brownian_motion(p * 3.4) * noise_amplitude;
   return p.norm() - (sphere_radius + displacement);
 }
 
 bool sphere_trace(const Vec3f& orig, const Vec3f& dir, Vec3f& pos) {
+  if (orig * orig - pow(orig * dir, 2) > pow(sphere_radius, 2)) {
+    return false;
+  }
+
   pos = orig;
   for (size_t i = 0; i < 128; i++){
     float d = signed_distance(pos);
