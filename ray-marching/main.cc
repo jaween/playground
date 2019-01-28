@@ -10,9 +10,12 @@
 #include "geometry.h"
 
 const float sphere_radius = 1.5;
+const float noise_amplitude = 0.2;
 
 float signed_distance(const Vec3f& p) {
-  return p.norm() - sphere_radius;
+  Vec3f s = Vec3f(p).normalize(sphere_radius);
+  float displacement = sin(16 * s.x) * sin(16 * s.y) * sin(16 * s.z) * noise_amplitude;
+  return p.norm() - (sphere_radius + displacement);
 }
 
 bool sphere_trace(const Vec3f& orig, const Vec3f& dir, Vec3f& pos) {
