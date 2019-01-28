@@ -49,6 +49,24 @@ float fractal_brownian_motion(const Vec3f& x) {
   return f / 0.9375;
 }
 
+Vec3f palette_fire(const float d) {
+  const Vec3f yellow(1.7, 1.3, 1.0);
+  const Vec3f orange(1.0, 0.6, 0.0);
+  const Vec3f red(1.0, 0.0, 0.0);
+  const Vec3f darkgrey(0.2, 0.2, 0.2);
+  const Vec3f grey(0.4, 0.4, 0.4);
+  
+  float x = std::max(0.0f, std::min(1.0f, d));
+  if (x < 0.25f) {
+    return lerp(grey, darkgrey, x * 4.0f);
+  } else if (x < 0.5f) {
+    return lerp(darkgrey, red, x * 4.0f - 1.0f);
+  } else if (x < 0.75f) {
+    return lerp(red, orange, x * 4.0f - 2.0f);
+  }
+  return lerp(orange, yellow, x * 4.0f - 3.0f);
+}
+
 float signed_distance(const Vec3f& p) {
   float displacement = -fractal_brownian_motion(p * 3.4) * noise_amplitude;
   return p.norm() - (sphere_radius + displacement);
@@ -95,9 +113,10 @@ int main() {
 
       Vec3f hit;
       if (sphere_trace(Vec3f(0, 0, 3), Vec3f(dir_x, dir_y, dir_z).normalize(), hit)) {
+        float noise_level = (sphere_radius - hit.norm()) / noise_amplitude;
         Vec3f light_dir = (Vec3f(10, 10, 10) - hit).normalize();
         float light_intensity = std::max(0.4f, light_dir * distance_field_normal(hit));
-        framebuffer[i + j * width] = Vec3f(1, 1, 1) * light_intensity;
+        framebuffer[i + j * width] = palette_fire((-0.2f + noise_level) * 2) * light_intensity;
       } else {
         framebuffer[i + j * width] = Vec3f(0.2, 0.7, 0.8);
       }
