@@ -55,7 +55,7 @@ int main() {
   ofs << "P6\n" << width << " " << height << "\n255\n";
   for (size_t i = 0; i < height * width; i++) {
     for (size_t j = 0; j < 3; j++) {
-      ofs << (char)(255 * std::max(0, std::min(255, static_cast<int>(255 * framebuffer[i][j]))));
+      ofs << (char)(std::max(0, std::min(255, static_cast<int>(255 * framebuffer[i][j]))));
     }
   }
   ofs.close();
