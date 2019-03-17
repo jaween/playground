@@ -9,8 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  tuple: ^1.0.2
 
 dev_dependencies:
+  intl_translation: ^0.17.3
 
 flutter:
   uses-material-design: true

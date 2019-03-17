@@ -1,0 +1,36 @@
+{
+  "appTitle": "تدويل",
+  "@appTitle": {
+    "description": "Name of the application (for the App Switcher/Recent Apps)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "pageTitle": "مثال اللغة",
+  "@pageTitle": {
+    "description": "Title in the top app bar of the page",
+    "type": "text",
+    "placeholders": {}
+  },
+  "bodyText": "وأنا أكتب",
+  "@bodyText": {
+    "description": "Message which displays in the main body of the app",
+    "type": "text",
+    "placeholders": {}
+  },
+  "gooseCount": "{howMany, plural, =0 {لا الأوز} =1 {{howMany} أوزة} =2 {{howMany} الأوز} few {{howMany} الأوز} many {{howMany} الأوز} other {{howMany} الأوز}}",
+  "@gooseCount": {
+    "description": "Message which displays in the main body of the app",
+    "type": "text",
+    "placeholders": {
+      "howMany": {}
+    }
+  },
+  "welcome": "مرحبًا {name} !",
+  "@welcome": {
+    "description": "Greeting message for the user",
+    "type": "text",
+    "placeholders": {
+      "name": {}
+    }
+  }
+}
