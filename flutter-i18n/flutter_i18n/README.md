@@ -1,16 +1,18 @@
 # flutter_i18n
 
-Practising internationalisation in Flutter and Dart
+A toy app to learn the Dart [`intl_translations`](https://pub.dartlang.org/packages/intl_translation) package and how to structure a Flutter app for internationalisation.
 
-## Getting Started
+Should be straightforward to decouple from Flutter and use in a cross-platform way (should only be tightly coupled in `lib/l10n/locales.dart`).
 
-This project is a starting point for a Flutter application.
+## Steps to localise values
 
-A few resources to get you started if this is your first Flutter project:
+1. Add defaults for localisable values to `lib/l10n/my_app_localizations.dart`.
 
-- [Lab: Write your first Flutter app](https://flutter.io/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.io/docs/cookbook)
+2. Run `./generate_arbs.sh` to create the translations [ARB](https://github.com/googlei18n/app-resource-bundle/wiki/ApplicationResourceBundleSpecification) file at `assets/l10n/intl_messages.arb`
 
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.io/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+3. Give copies of this file to translators for localisation.
+
+4. Place the translated files in `assets/l10n/intl_XX_YY.arb`
+(where `XX` is the [language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) and `YY` is an optional [country code](https://en.wikipedia.org/wiki/ISO_3166-1), ex. `intl_ar.arb` for Arabic or `intl_en_AU.arb` for Australian English).
+
+5. Run `./arb_to_dart.sh` to generate Dart files containing the localisations in `lib/l10n/localizations`
