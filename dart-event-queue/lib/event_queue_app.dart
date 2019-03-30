@@ -75,6 +75,24 @@ class _EventQueueAppState extends State<EventQueueApp> {
           touchEventSink: _drawingLogic.touchEventSink,
         ),
         Align(
+          alignment: Alignment.topCenter,
+          child: SafeArea(
+            child: Column(
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    _buildLoadingSpinner(),
+                    Expanded(
+                      child: _buildCheckbox(),
+                    ),
+                  ],
+                ),
+                _buildLoadingBar(),
+              ],
+            ),
+          ),
+        ),
+        Align(
           alignment: Alignment.bottomCenter,
           child: Material(
             type: MaterialType.transparency,
@@ -93,21 +111,46 @@ class _EventQueueAppState extends State<EventQueueApp> {
             ),
           ),
         ),
-        Align(
-          alignment: Alignment.topLeft,
-          child: SafeArea(
-            child: Row(
-              children: <Widget>[
-                Checkbox(
-                  onChanged: (value) => setState(() => _eventQueue.useEventQueue = value),
-                  value: _eventQueue.useEventQueue,
-                ),
-                Text("Use EventQueue"),
-              ],
-            ),
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildCheckbox() {
+    return CheckboxListTile(
+      title: Text("Use EventQueue"),
+      onChanged: (value) =>
+          setState(() => _eventQueue.useEventQueue = value),
+      value: _eventQueue.useEventQueue,
+    );
+  }
+
+  Widget _buildLoadingSpinner() {
+    return StreamBuilder<double>(
+      stream: _eventQueue.progressStream,
+      initialData: 1.0,
+      builder: (context, snapshot) {
+        final processing = snapshot.data != 1;
+        final visible = processing && _eventQueue.useEventQueue;
+        return Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Opacity(
+            opacity: visible ? 1.0 : 0.0,
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingBar() {
+    return StreamBuilder<double>(
+      stream: _eventQueue.progressStream,
+      initialData: 1,
+      builder: (context, snapshot) {
+        return LinearProgressIndicator(
+          value: snapshot.data,
+        );
+      },
     );
   }
 }

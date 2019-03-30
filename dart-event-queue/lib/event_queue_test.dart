@@ -1,10 +1,16 @@
 import 'dart:async';
 
+import 'package:rxdart/rxdart.dart';
+
 typedef Event = Future<void> Function();
 
 class EventQueue {
   var _eventController = StreamController<Event>();
   Sink<Event> get eventSink => _eventController.sink;
+
+  var _progressController = StreamController<double>.broadcast();
+  Stream<double> get progressStream => _progressController.stream;
+
   final _events = <Event>[];
   bool _running = false;
   bool useEventQueue = true;
@@ -15,6 +21,7 @@ class EventQueue {
 
   void dispose() {
     _eventController.close();
+    _progressController.close();
   }
 
   void _run() {
@@ -25,14 +32,20 @@ class EventQueue {
       }
 
       _events.add(event);
+
+      // UI progress bar
+      _progressController.add(1/(_events.length + 1));
+
+      // This event may have been added while other events are being executed
       while (!_running && _events.isNotEmpty) {
-        final now = DateTime.now();
-        print("Starting event $now");
+        // Execute event
         _running = true;
         await _events.first();
         _events.removeAt(0);
         _running = false;
-        print("Received done $now");
+
+        // UI progress bar
+        _progressController.add(1/(_events.length + 1));
       }
     });
   }

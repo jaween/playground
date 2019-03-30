@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as Ui;
 
 import 'package:event_queue_flutter/event_queue_test.dart';
@@ -44,7 +45,9 @@ class UndoLogic {
     }
 
     // Artificial delay
-    await Future.delayed(Duration(milliseconds: 350));
+    final random = Random();
+    final time = random.nextInt(350) + 50;
+    await Future.delayed(Duration(milliseconds: time));
 
     redoImages.add(undoImages.removeLast());
     final image = undoImages.last;
@@ -60,7 +63,9 @@ class UndoLogic {
     }
 
     // Artificial delay
-    await Future.delayed(Duration(milliseconds: 350));
+    final random = Random();
+    final time = random.nextInt(350) + 50;
+    await Future.delayed(Duration(milliseconds: time));
 
     final image = redoImages.removeLast();
     undoImages.add(image);
