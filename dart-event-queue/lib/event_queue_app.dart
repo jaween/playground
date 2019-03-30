@@ -4,6 +4,7 @@ import 'package:event_queue_flutter/drawing_logic.dart';
 import 'package:event_queue_flutter/event_queue_test.dart';
 import 'package:event_queue_flutter/shared_data.dart';
 import 'package:event_queue_flutter/surface.dart';
+import 'package:event_queue_flutter/undo_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -15,19 +16,30 @@ class EventQueueApp extends StatefulWidget {
 class _EventQueueAppState extends State<EventQueueApp> {
   final _sharedData = SharedData();
   Subject<Ui.Image> _imageController;
+  Subject<Ui.Image> _completeImageController;
   EventQueue _eventQueue;
   DrawingLogic _drawingLogic;
+  UndoLogic _undoLogic;
 
   @override
   void initState() {
     super.initState();
 
     _imageController = BehaviorSubject();
+    _completeImageController = BehaviorSubject();
     _eventQueue = EventQueue();
     _drawingLogic = DrawingLogic(
       sharedData: _sharedData,
+      eventSink: _eventQueue.eventSink,
       imageSink: _imageController.sink,
-      eventQueue: _eventQueue,
+      completeImageSink: _completeImageController.sink,
+    );
+    _undoLogic = UndoLogic(
+      sharedData: _sharedData,
+      eventSink: _eventQueue.eventSink,
+      imageSink: _imageController.sink,
+      completeImageSink: _completeImageController.sink,
+      completeImageStream: _completeImageController.stream,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -41,6 +53,7 @@ class _EventQueueAppState extends State<EventQueueApp> {
       );
       _sharedData.image = image;
       _imageController.add(image);
+      _completeImageController.add(image);
     });
   }
 
@@ -48,6 +61,7 @@ class _EventQueueAppState extends State<EventQueueApp> {
   void dispose() {
     super.dispose();
     _imageController.close();
+    _completeImageController.close();
     _drawingLogic.dispose();
   }
 
@@ -69,13 +83,11 @@ class _EventQueueAppState extends State<EventQueueApp> {
               children: <Widget>[
                 IconButton(
                   icon: Icon(Icons.undo),
-                  onPressed: () {
-                    print("Undo");
-                  },
+                  onPressed: () => _undoLogic.undo(),
                 ),
                 IconButton(
                   icon: Icon(Icons.redo),
-                  onPressed: () {},
+                  onPressed: () => _undoLogic.redo(),
                 ),
               ],
             ),

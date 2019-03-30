@@ -16,15 +16,20 @@ class DrawingLogic {
 
   final Sink<Ui.Image> imageSink;
 
-  final EventQueue eventQueue;
+  final Sink<Ui.Image> completeImageSink;
 
   TouchEvent _previousEvent;
 
   double _hue = 0;
 
-  DrawingLogic({@required this.sharedData, this.imageSink, this.eventQueue}) {
+  DrawingLogic({
+    @required this.sharedData,
+    @required Sink<Event> eventSink,
+    this.imageSink,
+    this.completeImageSink,
+  }) {
     _touchEventController.listen((coord) {
-      eventQueue.eventSink.add(() => _draw(coord));
+      eventSink.add(() => _draw(coord));
     });
   }
 
@@ -58,6 +63,7 @@ class DrawingLogic {
         _previousEvent = event;
         break;
       case EventType.End:
+        completeImageSink.add(sharedData.image);
         break;
     }
   }
