@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 typedef Event = Future<void> Function();
 
@@ -7,7 +6,8 @@ class EventQueue {
   var _eventController = StreamController<Event>();
   Sink<Event> get eventSink => _eventController.sink;
   final _events = <Event>[];
-  bool running = false;
+  bool _running = false;
+  bool useEventQueue = true;
 
   EventQueue() {
     _run();
@@ -19,14 +19,19 @@ class EventQueue {
 
   void _run() {
     _eventController.stream.listen((Event event) async {
+      if (!useEventQueue) {
+        event();
+        return;
+      }
+
       _events.add(event);
-      while (!running && _events.isNotEmpty) {
+      while (!_running && _events.isNotEmpty) {
         final now = DateTime.now();
         print("Starting event $now");
-        running = true;
+        _running = true;
         await _events.first();
         _events.removeAt(0);
-        running = false;
+        _running = false;
         print("Received done $now");
       }
     });

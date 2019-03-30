@@ -33,7 +33,7 @@ class _EventQueueAppState extends State<EventQueueApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       var pictureRecorder = Ui.PictureRecorder();
       var canvas = Canvas(pictureRecorder);
-      canvas.drawColor(Colors.orange, BlendMode.color);
+      canvas.drawColor(Colors.white, BlendMode.clear);
       var picture = pictureRecorder.endRecording();
       var image = await picture.toImage(
         context.size.width.toInt(),
@@ -59,6 +59,41 @@ class _EventQueueAppState extends State<EventQueueApp> {
         Surface(
           imageStream: _imageController.stream,
           touchEventSink: _drawingLogic.touchEventSink,
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.undo),
+                  onPressed: () {
+                    print("Undo");
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.redo),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.topLeft,
+          child: SafeArea(
+            child: Row(
+              children: <Widget>[
+                Checkbox(
+                  onChanged: (value) => setState(() => _eventQueue.useEventQueue = value),
+                  value: _eventQueue.useEventQueue,
+                ),
+                Text("Use EventQueue"),
+              ],
+            ),
+          ),
         ),
       ],
     );

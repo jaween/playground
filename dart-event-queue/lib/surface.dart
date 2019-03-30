@@ -1,10 +1,11 @@
 import 'dart:ui' as Ui;
 
+import 'package:event_queue_flutter/shared_data.dart';
 import 'package:flutter/material.dart';
 
 class Surface extends StatelessWidget {
   final Stream<Ui.Image> imageStream;
-  final Sink<Offset> touchEventSink;
+  final Sink<TouchEvent> touchEventSink;
 
   Surface({
     @required this.imageStream,
@@ -24,15 +25,30 @@ class Surface extends StatelessWidget {
           );
         }
         return GestureDetector(
-          onPanStart: (details) => touchEventSink.add(details.globalPosition),
-          onPanUpdate: (details) => touchEventSink.add(details.globalPosition),
-          onPanEnd: (details) => touchEventSink.add(null),
+          onPanStart: (details) => touchEventSink.add(_createTouchEvent(
+                EventType.Start,
+                details.globalPosition,
+              )),
+          onPanUpdate: (details) => touchEventSink.add(_createTouchEvent(
+                EventType.Update,
+                details.globalPosition,
+              )),
+          onPanEnd: (details) => touchEventSink.add(_createTouchEvent(
+                EventType.End,
+                null,
+              )),
           child: CustomPaint(
             painter: ImagePainter(image: image),
           ),
         );
       },
     );
+  }
+
+  TouchEvent _createTouchEvent(EventType type, Ui.Offset position) {
+    return TouchEvent()
+      ..type = type
+      ..offset = position;
   }
 }
 

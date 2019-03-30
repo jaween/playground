@@ -3,13 +3,14 @@ import 'dart:ui' as Ui;
 
 import 'package:event_queue_flutter/event_queue_test.dart';
 import 'package:event_queue_flutter/shared_data.dart';
+import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 import 'package:rxdart/rxdart.dart';
 
 class DrawingLogic {
-  Subject<Offset> _touchEventController = BehaviorSubject<Offset>();
+  Subject<TouchEvent> _touchEventController = BehaviorSubject<TouchEvent>();
 
-  Sink<Offset> get touchEventSink => _touchEventController;
+  Sink<TouchEvent> get touchEventSink => _touchEventController;
 
   final SharedData sharedData;
 
@@ -17,33 +18,82 @@ class DrawingLogic {
 
   final EventQueue eventQueue;
 
-  Offset previous;
+  TouchEvent _previousEvent;
+
+  double _hue = 0;
 
   DrawingLogic({@required this.sharedData, this.imageSink, this.eventQueue}) {
     _touchEventController.listen((coord) {
-      //eventQueue.eventSink.add(() {
-        _draw(coord);
-      //});
+      eventQueue.eventSink.add(() => _draw(coord));
     });
   }
 
-  void _draw(Offset coord) async {
-    if (previous != null && coord != null) {
-      final pictureRecorder = PictureRecorder();
-      final canvas = Canvas(pictureRecorder);
-      canvas.drawImage(sharedData.image, Offset.zero, Paint());
-      canvas.drawLine(previous, coord, Paint()
-        ..strokeWidth = 4);
-      final picture = pictureRecorder.endRecording();
-      sharedData.image = await picture.toImage(
-        sharedData.image.width,
-        sharedData.image.height,
-      );
-      imageSink.add(sharedData.image);
+  Future<void> _draw(TouchEvent event) async {
+    switch (event.type) {
+      case EventType.Start:
+        _previousEvent = event;
+        break;
+      case EventType.Update:
+        final gradient = _createGradient(_previousEvent.offset, event.offset);
+
+        final pictureRecorder = PictureRecorder();
+        final canvas = Canvas(pictureRecorder);
+        canvas.drawImage(sharedData.image, Offset.zero, Paint());
+        canvas.drawLine(
+          _previousEvent.offset,
+          event.offset,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 8
+            ..shader = gradient
+            ..isAntiAlias = false
+            ..strokeCap = StrokeCap.round,
+        );
+        final picture = pictureRecorder.endRecording();
+        sharedData.image = await picture.toImage(
+          sharedData.image.width,
+          sharedData.image.height,
+        );
+        imageSink.add(sharedData.image);
+        _previousEvent = event;
+        break;
+      case EventType.End:
+        break;
+    }
+  }
+
+  Ui.Gradient _createGradient(Offset from, Offset to) {
+    const stopDegrees = 360 / 36;
+    final colors = <Color>[_colorFromHsl(_hue)];
+    final colorStops = <double>[0.0];
+    final segmentLength = (to - from).distance;
+    var remainingLength = segmentLength;
+    while (true) {
+      final nextStopHue =
+          _hue + ((_hue + stopDegrees) ~/ stopDegrees) * stopDegrees;
+      if (_hue + remainingLength < nextStopHue) {
+        _hue = (_hue + remainingLength) % 360;
+        colors.add(_colorFromHsl(_hue));
+        colorStops.add(1.0);
+        break;
+      } else {
+        _hue = nextStopHue % 360;
+        remainingLength -= stopDegrees;
+        colors.add(_colorFromHsl(_hue));
+        colorStops.add(1 - remainingLength / segmentLength);
+      }
     }
 
-    previous = coord;
+    return Ui.Gradient.linear(
+      from,
+      to,
+      colors,
+      colorStops,
+    );
   }
+
+  Color _colorFromHsl(double hue) =>
+      HSLColor.fromAHSL(1.0, hue, 1.0, 0.5).toColor();
 
   void dispose() {
     _touchEventController.close();
