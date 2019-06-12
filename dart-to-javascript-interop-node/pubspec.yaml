@@ -1,0 +1,8 @@
+name: dart_to_javascript_node_interop
+description: Compile Dart to JS, while enabling the use of JS libs on Node
+version: 0.0.0+1
+dependencies:
+  js: ^0.6.0
+  node_preamble: ^1.4.4
+  build_runner: 1.5.2
+  build_web_compilers: 2.1.0
