@@ -1,0 +1,7 @@
+name: dart_to_javascript_interop_websockets
+description: Playing around with WebSocket in Dart for Node and Browsers
+version: 0.0.0+1
+dependencies:
+  js: ^0.6.0
+  build_runner: 1.5.2
+  node_interop: ^1.0.3

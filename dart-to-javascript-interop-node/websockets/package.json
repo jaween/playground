@@ -1,0 +1,17 @@
+{
+  "name": "node-ws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "./build.sh && node main"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "isomorphic-ws": "^4.0.1",
+    "ws": "^7.0.0"
+  }
+}
