@@ -1,5 +1,3 @@
-import 'dart:js';
-
 import 'package:js/js.dart';
 import 'comms.dart';
 import 'websocket_impl.dart';

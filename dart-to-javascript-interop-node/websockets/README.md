@@ -5,9 +5,10 @@ Dart script which is compiled to JavaScript to run a WebSocket server (on Node),
 Dart talks to JavaScript using the Dart JavaScript interop package `package:js`.
 There are declarations on the Dart side in `websocket_impl.dart` which are implemented on the JavaScript side in `websocket_impl.js`. 
 
+`server_and_client` directory are pure JavaScript land servers and clients used for testing.
 
 ## Running
 
  1. `npm install` (Retrieves Node dependencies)
  2. `pub get` (Retrieves Dart dependencies)
- 3. `npm start` (Compiles Dart to JavaScript, prepends Node preamble and runner, runs the server)
+ 3. `npm run start` (Compiles Dart to JavaScript, prepends Node preamble and runner, runs the server)
