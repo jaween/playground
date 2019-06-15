@@ -1,0 +1,8 @@
+name: server
+description: Server-side netcode playground for a multiplayer game
+version: 0.0.0+1
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  web_socket_channel: ^1.0.13
