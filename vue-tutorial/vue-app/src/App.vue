@@ -1,5 +1,9 @@
 <template>
   <div id="app" class="small-container">
+    <router-view/>
+    <router-link to="/">Home</router-link>
+    </br></br>
+    <router-link to="/another">Another</router-link>
     <h1>Employee</h1>
 
     <employee-form @add:employee="addEmployee"/>
