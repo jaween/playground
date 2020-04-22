@@ -32,6 +32,12 @@ class _DrawCanvasState extends State<DrawCanvas> {
   @override
   Widget build(BuildContext context) {
     const canvasSize = Size(400, 400);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _image?.dispose();
+      setState(() {
+        _image = null;
+      });
+    });
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -62,16 +68,20 @@ class _DrawCanvasState extends State<DrawCanvas> {
   }
 
   void _initHandler() {
-    setState(() {
-      _handler = DrawingHandler(
-        onImageReady: (image) {
-          if (mounted) {
-            // New image ready to display
-            setState(() => _image = image);
-          }
-        },
-      );
-    });
+    setState(() => _image?.dispose());
+
+    final handler = DrawingHandler(
+      onImageReady: (image) {
+        if (mounted) {
+          // New image ready to display
+          setState(() {
+            _image?.dispose();
+            _image = image;
+          });
+        }
+      },
+    );
+    setState(() => _handler = handler);
     _handler.init();
   }
 }
