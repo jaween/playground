@@ -62,18 +62,11 @@ class DrawingHandler {
       Paint()
         ..isAntiAlias = true
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+        ..strokeWidth = 25,
     );
 
     return await pictureRecorder
         .endRecording()
         .toImage(image.width, image.height);
   }
-}
-
-Future<Image> _clone(Image image) async {
-  final clone = await image.toByteData(format: ImageByteFormat.png);
-  final codec = await instantiateImageCodec(clone.buffer.asUint8List());
-  final frame = await codec.getNextFrame();
-  return frame.image;
 }

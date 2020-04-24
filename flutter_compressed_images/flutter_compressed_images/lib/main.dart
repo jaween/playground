@@ -1,10 +1,6 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter_compressed_images/image_holder.dart';
 
-import 'image_list_screen.dart';
+import 'list_screen.dart';
 
 void main() {
   runApp(AppMenu());
@@ -20,13 +16,13 @@ class AppMenu extends StatelessWidget {
           case 'image':
             return MaterialPageRoute(
               settings: settings,
-              builder: (context) => ImageListScreen(png: false),
+              builder: (context) => ListScreen(),
             );
             break;
           case 'png':
             return MaterialPageRoute(
               settings: settings,
-              builder: (context) => ImageListScreen(png: true),
+              builder: (context) => ListScreen(),
             );
             break;
           case 'menu':
@@ -68,26 +64,5 @@ class AppMenu extends StatelessWidget {
         }
       },
     );
-  }
-}
-
-class ImagePainter extends CustomPainter {
-  final ui.Image image;
-
-  ImagePainter({@required this.image});
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
-
-  @override
-  void paint(ui.Canvas canvas, ui.Size size) {
-    final src = Rect.fromLTWH(
-      0,
-      0,
-      image.width.toDouble(),
-      image.height.toDouble(),
-    );
-    final dst = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawImageRect(image, src, dst, Paint());
   }
 }
