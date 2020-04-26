@@ -3,10 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/scheduler.dart';
 
+typedef void ImageReadyCallback(Image image);
+
 /// Takes input drawing pointer events and schedules painting each frame.
 class DrawingHandler {
   final Image image;
-  final Function onImageReady;
+  final ImageReadyCallback onImageReady;
 
   Path _path;
   Image _completeImage;

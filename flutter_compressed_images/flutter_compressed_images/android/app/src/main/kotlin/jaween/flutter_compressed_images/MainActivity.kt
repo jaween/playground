@@ -9,10 +9,20 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.jaween.test"
+    private val MEM_INFO_CHANNEL = "com.jaween.meminfo"
+    private val MEMORY_CHANNEL = "com.jaween.memory"
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        Log.e("MAIN", "############ Trim memory $level")
+        MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger, MEMORY_CHANNEL).invokeMethod("onTrimMemory", level);
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
+        Log.e("MAIN", "########## CONFIGURED")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEMORY_CHANNEL).invokeMethod("onTrimMemory", -123);
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEM_INFO_CHANNEL).setMethodCallHandler {
             call, result ->
             when (call.method) {
                 "getMemoryInfo" -> {
@@ -24,7 +34,8 @@ class MainActivity: FlutterActivity() {
                         "available" to info.availMem,
                         "threshold" to info.threshold,
                         "total" to info.totalMem,
-                        "lowMemory" to info.lowMemory
+                        "lowMemory" to info.lowMemory,
+                        "memoryClass" to activityManager.memoryClass
                     )
                     result.success(data)
                 }

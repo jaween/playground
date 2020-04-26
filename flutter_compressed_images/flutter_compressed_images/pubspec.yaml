@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+  async: ^2.4.1
   path_provider: ^1.6.7
   cupertino_icons: ^0.1.3
 

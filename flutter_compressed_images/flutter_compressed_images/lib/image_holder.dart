@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:ui' as ui;
 
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -12,11 +13,14 @@ class ImageHolder {
 
   Uint8List _pngBytes;
   ui.Image _image;
-  Completer<ui.Image> _pngDecodeCompleter;
-  bool _editMode = false;
+  CancelableCompleter<ui.Image> _decodeCompleter;
+  CancelableCompleter<Uint8List> _encodeCompleter;
   bool _dirty = false;
 
-  ImageHolder._({@required Uint8List pngBytes}): _pngBytes = pngBytes;
+  ImageHolder._({@required Uint8List pngBytes}) : _pngBytes = pngBytes {
+    _encodeCompleter = CancelableCompleter<Uint8List>();
+    _encodeCompleter.complete(_pngBytes);
+  }
 
   static Future<ImageHolder> create() async {
     final pictureRecorder = PictureRecorder();
@@ -42,96 +46,113 @@ class ImageHolder {
       size.height.toInt(),
     );
     final bytes = await image.toByteData(format: ImageByteFormat.png);
+
     return ImageHolder._(pngBytes: bytes.buffer.asUint8List());
   }
 
   Future<void> createImage({@required VoidCallback onImageReady}) async {
-
     onImageReady();
   }
 
   bool get dirty => _dirty;
 
-  bool get editMode => _editMode;
+  _ImgState _state = _ImgState.encoded;
+
+  bool get decoded => _state == _ImgState.decoded;
+
+  bool get decoding => _state == _ImgState.decoding;
+
+  bool get encoded => _state == _ImgState.encoded;
+
+  bool get encoding => _state == _ImgState.encoding;
 
   Uint8List get pngBytes => _pngBytes;
 
-  Future<ui.Image> get uiImage => _pngDecodeCompleter.future;
+  Future<ui.Image> get uiImage =>
+      _decodeCompleter?.operation?.value ?? Future.value(_image);
 
   Future<void> beginEditing() {
-    if (editMode) {
-      return _pngDecodeCompleter.future;
+    if (_state == _ImgState.encoding) {
+      // Quick exit
+      _encodeCompleter?.operation?.cancel();
+      _decodeCompleter = CancelableCompleter<ui.Image>();
+      _state = _ImgState.decoded;
+      _decodeCompleter.complete(_image);
+      return _decodeCompleter.operation.value;
+    } else if (_state == _ImgState.decoded || _state == _ImgState.decoding) {
+      return _decodeCompleter.operation.value;
     }
 
-    _editMode = true;
-    _pngDecodeCompleter = Completer<ui.Image>();
-    final decode = () async {
-      final codec = await instantiateImageCodec(_pngBytes);
-      final frame = await codec.getNextFrame();
+    final completer = CancelableCompleter<ui.Image>();
+    _decodeCompleter = completer;
+    _begin(completer);
+    return _decodeCompleter.operation.value;
+  }
+
+  void _begin(CancelableCompleter<ui.Image> completer) async {
+    _state = _ImgState.decoding;
+    final codec = await instantiateImageCodec(_pngBytes);
+    final frame = await codec.getNextFrame();
+
+    if (!completer.isCanceled) {
       _image = frame.image;
-      _pngDecodeCompleter?.complete(_image);
-    };
-    decode();
-    return _pngDecodeCompleter.future;
+      _state = _ImgState.decoded;
+      completer.complete(_image);
+    }
+  }
+
+  Future<void> endEditing() {
+    if (_state == _ImgState.decoding) {
+      // Quick exit
+      _decodeCompleter?.operation?.cancel();
+      _encodeCompleter = CancelableCompleter<Uint8List>();
+      _state = _ImgState.encoded;
+      _encodeCompleter.complete(_pngBytes);
+      return _encodeCompleter.operation.value;
+    } else if (_state == _ImgState.encoded || _state == _ImgState.encoding) {
+      return _encodeCompleter.operation.value;
+    }
+
+    final completer = CancelableCompleter<Uint8List>();
+    _encodeCompleter = completer;
+    _end(completer);
+    return _encodeCompleter.operation.value;
+  }
+
+  void _end(CancelableCompleter<Uint8List> completer) async {
+    _state = _ImgState.encoding;
+    if (dirty) {
+      final pngByteData = await _image.toByteData(format: ImageByteFormat.png);
+      if (!completer.isCanceled) {
+        _pngBytes = pngByteData.buffer.asUint8List();
+        _dirty = false;
+        _state = _ImgState.encoded;
+
+        completer.complete(_pngBytes);
+      }
+    } else {
+      _state = _ImgState.encoded;
+      completer.complete(_pngBytes);
+    }
   }
 
   void edited({@required ui.Image edited}) async {
-    assert(editMode);
-    _image = edited;
-    _dirty = true;
-    _pngDecodeCompleter = Completer<ui.Image>();
-    _pngDecodeCompleter.complete(edited);
-  }
-
-  Future<void> endEditing() async {
-    assert(editMode);
-
-    if (dirty) {
-      final pngByteData = await _image.toByteData(format: ImageByteFormat.png);
-      _pngBytes = pngByteData.buffer.asUint8List();
+    if (_state != _ImgState.decoded) {
+      assert(false, 'Not decdoded, probably ok!');
+      return;
     }
 
-    _editMode = false;
-    _pngDecodeCompleter = null;
-    _image = null;
-    _dirty = false;
+    _image = edited;
+    _dirty = true;
+
+    _decodeCompleter = CancelableCompleter<ui.Image>();
+    _decodeCompleter.complete(edited);
   }
 }
 
-/**
-    Uint8List _pngBytes;
-    ui.Image _image;
-    Completer<ui.Image> _imageCompleter;
-
-    bool get editMode;
-
-    Uint8List get readOnlyImage {
-    assert(!editMode);
-    return _pngBytes;
-    }
-
-    Future<ui.Image> beginEditing() async {
-    if (editMode) {
-    return Future.value(_image);
-    }
-
-    final decode = () async {
-    final codec = await instantiateImageCodec(_pngBytes);
-    final frame = await codec.getNextFrame();
-    _image = frame.image;
-    editMode = true;
-    _imageCompleter.completer(_image);
-    };
-    decode();
-    return _imageCompleter.future;
-    }
-
-    Future<void> completeEditing({ui.Image image}) async {
-    assert(editMode);
-    if (_editMode && image != null && image != _image) {
-    _pngData = await image.toByteData(format: PNG);
-    _image = null;
-    }
-    _editMode = false;
-    }
- */
+enum _ImgState {
+  encoded,
+  encoding,
+  decoded,
+  decoding,
+}

@@ -64,7 +64,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
               onPanUpdate: (p) => _handler
                   .move(p.localPosition / 200 * ImageHolder.size.height),
               onPanEnd: (d) => _handler.end(),
-              child: ImageDisplay(image: _image),
+              child: ImageDisplayOnlyDecoded(image: _image),
             ),
     );
   }

@@ -13,10 +13,22 @@ class ListScreen extends StatefulWidget {
 
 class _ListScreenState extends State<ListScreen> {
   final _images = <ImageHolder>[];
+  final _keys = <GlobalKey>[];
   int _selected;
 
   @override
   void initState() {
+    MethodChannel('com.jaween.memory').setMethodCallHandler((call) {
+      switch (call.method) {
+        case 'onTrimMemory':
+          print(
+              "##### On low  memory call recieved from Java, level ${call.arguments}");
+          break;
+        default:
+          print('Unknown method ${call.method}');
+      }
+      return Future.value();
+    });
     _addNewImageHolder().then((_) {
       if (mounted) {
         setState(() {
@@ -34,7 +46,10 @@ class _ListScreenState extends State<ListScreen> {
   Future<void> _addNewImageHolder() async {
     final image = await ImageHolder.create();
     if (mounted) {
-      setState(() => _images.add(image));
+      setState(() {
+        _keys.add(GlobalKey());
+        _images.add(image);
+      });
     }
   }
 
@@ -58,16 +73,14 @@ class _ListScreenState extends State<ListScreen> {
               child: ListView.builder(
                 itemCount: _images.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
+                  return GestureDetector(
                     onTap: () async {
                       // TODO: Maybe make end then begin more robust to not need this check
                       if (_selected == index) {
                         return;
                       }
 
-                      _images[_selected]
-                          .endEditing()
-                          .then((_) => setState(() {}));
+                      final prevSelected = _selected;
                       setState(() {
                         _selected = index;
                         _images[_selected]
@@ -76,17 +89,20 @@ class _ListScreenState extends State<ListScreen> {
                                   print("Editing ready");
                                 }));
                       });
+                      _images[prevSelected]
+                          .endEditing()
+                          .then((_) => setState(() {
+                      }));
                     },
-                    title: Container(
-                      width: 100,
+                    child: Container(
                       height: 100,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          width: _selected == index ? 10 : 1,
+                      color: _selected == index ? Colors.black : null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ImageDisplay(
+                          key: _keys[index],
+                          imageHolder: _images[index],
                         ),
-                      ),
-                      child: ImageDisplay(
-                        imageHolder: _images[index],
                       ),
                     ),
                   );
@@ -100,8 +116,9 @@ class _ListScreenState extends State<ListScreen> {
             RaisedButton(
               child: Text("Get Memory Info"),
               onPressed: () async {
-                final channel = MethodChannel('com.jaween.test');
+                final channel = MethodChannel('com.jaween.meminfo');
                 final info = await channel.invokeMethod('getMemoryInfo');
+                print("########## Memory info at ${_images.length} images");
                 print(info);
               },
             ),
