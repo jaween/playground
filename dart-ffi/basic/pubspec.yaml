@@ -1,0 +1,5 @@
+name: dart_ffi
+description: Learning Dart's "Foreign Function Interface" library for C interop
+
+dependencies:
+ 
