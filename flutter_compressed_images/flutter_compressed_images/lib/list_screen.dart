@@ -32,10 +32,8 @@ class _ListScreenState extends State<ListScreen> {
     _addNewImageHolder().then((_) {
       if (mounted) {
         setState(() {
-          setState(() {
-            _selected = 0;
-            _images[_selected].beginEditing().then((_) => setState(() => {}));
-          });
+          _selected = 0;
+          _images[_selected].beginEditing().then((_) => setState(() => {}));
         });
       }
     });
@@ -91,8 +89,7 @@ class _ListScreenState extends State<ListScreen> {
                       });
                       _images[prevSelected]
                           .endEditing()
-                          .then((_) => setState(() {
-                      }));
+                          .then((_) => setState(() {}));
                     },
                     child: Container(
                       height: 100,

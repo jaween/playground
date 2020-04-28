@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -18,31 +17,68 @@ class ImageDisplay extends StatefulWidget {
 }
 
 class _ImageDisplayState extends State<ImageDisplay> {
+  bool _memoryImageReady = false;
+  MemoryImage _memoryImage;
   ui.Image _cachedImage;
 
   @override
   void initState() {
-    print("init");
+    _loadPng();
     super.initState();
   }
 
   @override
   void didUpdateWidget(ImageDisplay oldWidget) {
-    if (widget.imageHolder != null) {
-      if (widget.imageHolder.decoded) {
-        print(
-            "${widget.imageHolder.hashCode} Image is decoded, so will cache it...");
-        widget.imageHolder.uiImage.then((image) {
-          setState(() => _cachedImage = image);
-          print("${widget.imageHolder.hashCode} Cache updated");
-        });
-      } else if (widget.imageHolder.encoded) {
-        print("${widget.imageHolder.hashCode} Cache is stale, discarding");
-        setState(() => _cachedImage = null);
+    final hashCode = widget.imageHolder.hashCode;
+    if (widget.imageHolder.decoded) {
+      print("$hashCode Image is decoded, so will cache it...");
+      widget.imageHolder.uiImage.then((image) {
+        final stillNecessary = widget.imageHolder.decoded ||
+            widget.imageHolder.encoding ||
+            !_memoryImageReady;
+        if (mounted && stillNecessary) {
+          setState(() {
+            _memoryImageReady = false;
+            _memoryImage = null;
+            _cachedImage = image;
+          });
+        }
+        print("$hashCode Cache updated");
+      });
+    } else if (widget.imageHolder.encoded) {
+      if (_memoryImageReady == false) {
+        print("$hashCode Waiting for PNG decode before discarding cache");
+        _loadPng();
       }
     }
 
     super.didUpdateWidget(oldWidget);
+  }
+
+  void _loadPng() {
+    setState(() {
+      _memoryImage = MemoryImage(widget.imageHolder.pngBytes);
+    });
+    _memoryImage.resolve(ImageConfiguration.empty).addListener(
+          ImageStreamListener(
+            (imageInfo, synchronousCall) {
+              final hashCode = widget.imageHolder.hashCode;
+              final stillNecessary =
+                  widget.imageHolder.encoded || widget.imageHolder.decoding;
+              if (mounted && stillNecessary) {
+                print("$hashCode PNG ready, discarding cache");
+                setState(() {
+                  _memoryImageReady = true;
+                  _cachedImage = null;
+                });
+              }
+            },
+            onError: (error, stackTrace) {
+              print("Image load error: $error");
+              print(stackTrace);
+            },
+          ),
+        );
   }
 
   @override
@@ -50,30 +86,7 @@ class _ImageDisplayState extends State<ImageDisplay> {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        Builder(
-          builder: (context) {
-            if (widget.imageHolder.decoded || widget.imageHolder.encoding) {
-              return FutureBuilder<ui.Image>(
-                future: widget.imageHolder.uiImage,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    if (_cachedImage != null) {
-                      print(
-                          "${widget.imageHolder.hashCode} UI using cached image");
-                      return _buildDartUiImage(_cachedImage);
-                    }
-                    print("${widget.imageHolder.hashCode} UI using PNG");
-                    return _buildImageFromPngBytes(widget.imageHolder.pngBytes);
-                  }
-                  print("${widget.imageHolder.hashCode} UI using future image");
-                  return _buildDartUiImage(snapshot.data);
-                },
-              );
-            } else {
-              return _buildImageFromPngBytes(widget.imageHolder.pngBytes);
-            }
-          },
-        ),
+        _buildImage(),
         ..._buildDecodeEncodeStateText(
           context: context,
           imageHolder: widget.imageHolder,
@@ -82,19 +95,25 @@ class _ImageDisplayState extends State<ImageDisplay> {
     );
   }
 
-  Widget _buildDartUiImage(ui.Image image) {
-    return CustomPaint(
-      painter: ImagePainter(image: image),
-    );
-  }
-
-  Widget _buildImageFromPngBytes(Uint8List bytes) {
-    return Image.memory(
-      bytes,
-      fit: BoxFit.fill,
-      filterQuality: FilterQuality.none,
-      gaplessPlayback: true,
-    );
+  Widget _buildImage() {
+    if (_memoryImageReady) {
+      return Image(
+        image: _memoryImage,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.none,
+        gaplessPlayback: true,
+      );
+    } else {
+      if (_cachedImage == null) {
+        return Container(
+          color: Colors.transparent,
+        );
+      } else {
+        return CustomPaint(
+          painter: ImagePainter(image: _cachedImage),
+        );
+      }
+    }
   }
 
   List<Widget> _buildDecodeEncodeStateText({
