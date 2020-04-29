@@ -36,14 +36,25 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   }
 
   void onImageHolderChanged() {
+    final imageHolderAtStart = widget.imageHolder;
     widget.imageHolder.uiImage.then((image) async {
+      // Image holder has since been changed, no need to use this decoded image
+      if (widget.imageHolder != imageHolderAtStart) {
+        return;
+      }
       setState(() {
         _image = image;
         _handler = DrawingHandler(
           image: image,
           onImageReady: (newImage) async {
-            widget.onImageModified(newImage);
-            setState(() => _image = newImage);
+            // Image holder has since been changed, no need to use this drawing
+            if (widget.imageHolder != imageHolderAtStart) {
+              return;
+            }
+            if (widget.imageHolder.decoded) {
+              widget.onImageModified(newImage);
+              setState(() => _image = newImage);
+            }
           },
         );
       });
@@ -52,20 +63,23 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      height: 200,
-      color: _image == null ? Colors.grey : null,
-      child: _image == null
-          ? null
-          : GestureDetector(
-              onPanDown: (p) => _handler
-                  .start(p.localPosition / 200 * ImageHolder.size.width),
-              onPanUpdate: (p) => _handler
-                  .move(p.localPosition / 200 * ImageHolder.size.height),
-              onPanEnd: (d) => _handler.end(),
-              child: ImageDisplayOnlyDecoded(image: _image),
-            ),
+    return IgnorePointer(
+      ignoring: !widget.imageHolder.decoded,
+      child: Container(
+        width: 200,
+        height: 200,
+        color: _image == null ? Colors.grey : null,
+        child: _image == null
+            ? null
+            : GestureDetector(
+                onPanDown: (p) => _handler
+                    .start(p.localPosition / 200 * ImageHolder.size.width),
+                onPanUpdate: (p) => _handler
+                    .move(p.localPosition / 200 * ImageHolder.size.height),
+                onPanEnd: (d) => _handler.end(),
+                child: ImageDisplayOnlyDecoded(image: _image),
+              ),
+      ),
     );
   }
 }

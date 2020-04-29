@@ -23,7 +23,11 @@ class _ImageDisplayState extends State<ImageDisplay> {
 
   @override
   void initState() {
-    _loadPng();
+    if (widget.imageHolder.decoded) {
+      _loadUiImage();
+    } else {
+      _loadPng();
+    }
     super.initState();
   }
 
@@ -32,19 +36,7 @@ class _ImageDisplayState extends State<ImageDisplay> {
     final hashCode = widget.imageHolder.hashCode;
     if (widget.imageHolder.decoded) {
       print("$hashCode Image is decoded, so will cache it...");
-      widget.imageHolder.uiImage.then((image) {
-        final stillNecessary = widget.imageHolder.decoded ||
-            widget.imageHolder.encoding ||
-            !_memoryImageReady;
-        if (mounted && stillNecessary) {
-          setState(() {
-            _memoryImageReady = false;
-            _memoryImage = null;
-            _cachedImage = image;
-          });
-        }
-        print("$hashCode Cache updated");
-      });
+      _loadUiImage();
     } else if (widget.imageHolder.encoded) {
       if (_memoryImageReady == false) {
         print("$hashCode Waiting for PNG decode before discarding cache");
@@ -56,9 +48,7 @@ class _ImageDisplayState extends State<ImageDisplay> {
   }
 
   void _loadPng() {
-    setState(() {
-      _memoryImage = MemoryImage(widget.imageHolder.pngBytes);
-    });
+    setState(() => _memoryImage = MemoryImage(widget.imageHolder.pngBytes));
     _memoryImage.resolve(ImageConfiguration.empty).addListener(
           ImageStreamListener(
             (imageInfo, synchronousCall) {
@@ -79,6 +69,22 @@ class _ImageDisplayState extends State<ImageDisplay> {
             },
           ),
         );
+  }
+
+  void _loadUiImage() {
+    widget.imageHolder.uiImage.then((image) {
+      final stillNecessary = widget.imageHolder.decoded ||
+          widget.imageHolder.encoding ||
+          !_memoryImageReady;
+      if (mounted && stillNecessary) {
+        setState(() {
+          _memoryImageReady = false;
+          _memoryImage = null;
+          _cachedImage = image;
+        });
+      }
+      print("$hashCode Cache updated");
+    });
   }
 
   @override

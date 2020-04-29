@@ -138,7 +138,7 @@ class ImageHolder {
 
   void edited({@required ui.Image edited}) async {
     if (_state != _ImgState.decoded) {
-      assert(false, 'Not decdoded, probably ok!');
+      assert(false, 'Not decdoded!');
       return;
     }
 
