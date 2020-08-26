@@ -1,0 +1,27 @@
+name: finalizers_example
+description: Running native finalizers when Dart GC occurs
+
+publish_to: 'none' 
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^0.1.3
+  bitmap: ^0.0.6
+
+flutter:
+  uses-material-design: true
+
+dev_dependencies:
+  ffigen: ^0.1.0
+
+ffigen:
+  output: 'lib/lib_bindings.dart'
+  name: 'ExampleLibraryBindings'
+  description: 'Native library.'
+  headers:
+   - 'example_library/example.h'
