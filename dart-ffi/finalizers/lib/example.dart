@@ -40,7 +40,7 @@ class _ExampleState extends State<Example> {
           RaisedButton(
             child: Text('Register finalizer'),
             onPressed: () {
-              final obj = MyObject(5);
+              final obj = MyObject();
               final registerFinaliser = lib.lookupFunction<
                   Void Function(Handle, Pointer<Uint32>, IntPtr),
                   void Function(
@@ -63,7 +63,7 @@ class _ExampleState extends State<Example> {
 
 class MyObject {
   Pointer<Uint32> data;
-  MyObject(int a) {
+  MyObject() {
     data = allocate<Uint32>(count: 2);
     final list = data.asTypedList(2).buffer.asUint32List();
     list[0] = 0xCAFEBABE;

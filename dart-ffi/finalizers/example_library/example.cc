@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "include/dart_api_dl.h"
 #include "include/dart_api_dl.c"
@@ -15,6 +16,7 @@ static void RunFinalizer(
   Dart_WeakPersistentHandle handle,
   void* peer) {
     printf("FINALIZING: %p %x %x %p\n", peer, ((uint32_t*) peer)[0], ((uint32_t*) peer)[1], isolate_callback_data);
+    free(peer);
 }
 
 void registerFinaliser(Dart_Handle h, uint32_t* native_data, intptr_t length) {
