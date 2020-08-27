@@ -1,72 +1,32 @@
-import 'dart:ffi';
-import 'package:ffi/ffi.dart';
+import 'dart:ffi' as ffi;
 
-import 'package:finalizers_example/lib_bindings.dart';
-import 'package:flutter/material.dart';
+typedef _c_init_dart_dynamic_linking = ffi.Void Function(
+  ffi.Pointer<ffi.Void> data,
+);
 
-class Example extends StatefulWidget {
-  @override
-  _ExampleState createState() => _ExampleState();
-}
+typedef _dart_init_dart_dynamic_linking = void Function(
+  ffi.Pointer<ffi.Void> data,
+);
 
-class _ExampleState extends State<Example> {
-  ExampleLibraryBindings _bindings;
+typedef _c_register_finaliser = ffi.Pointer<ffi.Uint32> Function(
+  ffi.Handle handle,
+  ffi.IntPtr length,
+);
 
-  DynamicLibrary lib;
+typedef _dart_register_finaliser = ffi.Pointer<ffi.Uint32> Function(
+  Object object,
+  int length,
+);
 
-  @override
-  void initState() {
-    print(
-        'Dart VM API version ${NativeApi.majorVersion}.${NativeApi.minorVersion}');
+void main() {
+  final lib = ffi.DynamicLibrary.open('./libmylib.so');
+  final init = lib.lookupFunction<_c_init_dart_dynamic_linking,
+      _dart_init_dart_dynamic_linking>('init_dart_dynamic_linking');
+  init(ffi.NativeApi.initializeApiDLData);
 
-    lib = DynamicLibrary.open('./example_library/libmylib.so');
-    _bindings = ExampleLibraryBindings(lib);
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: Column(
-        children: [
-          Text('example'),
-          RaisedButton(
-            child: Text('Init Dart VM API'),
-            onPressed: () {
-              _bindings.initDartVmApi(NativeApi.initializeApiDLData);
-              print('Setup complete');
-            },
-          ),
-          RaisedButton(
-            child: Text('Register finalizer'),
-            onPressed: () {
-              final obj = MyObject();
-              final registerFinaliser = lib.lookupFunction<
-                  Void Function(Handle, Pointer<Uint32>, IntPtr),
-                  void Function(
-                      Object, Pointer<Uint32>, int)>("registerFinaliser");
-              registerFinaliser(obj, obj.data, 2);
-              print('Done');
-            },
-          ),
-          RaisedButton(
-            child: Text('Print'),
-            onPressed: () {
-              print('${DateTime.now()}');
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MyObject {
-  Pointer<Uint32> data;
-  MyObject() {
-    data = allocate<Uint32>(count: 2);
-    final list = data.asTypedList(2).buffer.asUint32List();
-    list[0] = 0xCAFEBABE;
-    list[1] = 0xDECAFBAD;
-  }
+  String objectWhichNeedsAFinaliser = "I need a finaliser";
+  final registerFinaliser =
+      lib.lookupFunction<_c_register_finaliser, _dart_register_finaliser>(
+          'register_finaliser');
+  final nativeDataPointer = registerFinaliser(objectWhichNeedsAFinaliser, 20);
 }
