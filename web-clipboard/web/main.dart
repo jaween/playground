@@ -12,13 +12,17 @@ StreamSubscription focusSubscription;
 void onFocus(Event e) async {
   focusSubscription?.cancel();
   _paste();
-  focusSubscription = window.onFocus.listen(onFocus);
+  //focusSubscription = window.onFocus.listen(onFocus);
 }
 
 void main() {
-  print('hello123');
+  print('hello1234');
 
-  focusSubscription = window.onFocus.listen(onFocus);
+  //focusSubscription = window.onFocus.listen(onFocus);
+
+  window.document.addEventListener('copy', (event) {
+    print('copy');
+  });
 
   final copy = document.querySelector('#copy');
   copy.onClick.listen((event) async {
