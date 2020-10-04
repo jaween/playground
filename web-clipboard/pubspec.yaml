@@ -1,0 +1,6 @@
+name: web_clipboard
+description: Playing with the Web Clipboard API
+author: Jaween Ediriweera
+version: 1.0.0
+dependencies:
+  js: ^0.6.2
