@@ -1,0 +1,14 @@
+name: native_port_example
+description: Using native ports with the Dart FFI
+publish_to: 'none' 
+version: 1.0.0+1
+
+dev_dependencies:
+  ffigen: ^0.1.0
+
+ffigen:
+  output: 'lib/lib_bindings.dart'
+  name: 'ExampleLibraryBindings'
+  description: 'Native library.'
+  headers:
+   - 'example_library/example.h'
