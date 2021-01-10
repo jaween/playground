@@ -28,5 +28,9 @@ void main() {
   final registerFinaliser =
       lib.lookupFunction<_c_register_finaliser, _dart_register_finaliser>(
           'register_finaliser');
-  final nativeDataPointer = registerFinaliser(objectWhichNeedsAFinaliser, 20);
+  const length = 5;
+  final nativeDataPointer =
+      registerFinaliser(objectWhichNeedsAFinaliser, length);
+  final list = nativeDataPointer.asTypedList(length);
+  print('Native data is $list');
 }
