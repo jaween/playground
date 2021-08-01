@@ -23,8 +23,8 @@ class _ImageDisplayState extends State<ImageDisplay> {
 
   @override
   void initState() {
-    if (widget.imageHolder.decoded) {
-      _loadUiImage();
+    if (widget.imageHolder.decompressed) {
+      _cacheUiImage();
     } else {
       _loadPng();
     }
@@ -34,17 +34,25 @@ class _ImageDisplayState extends State<ImageDisplay> {
   @override
   void didUpdateWidget(ImageDisplay oldWidget) {
     final hashCode = widget.imageHolder.hashCode;
-    if (widget.imageHolder.decoded) {
-      print("$hashCode Image is decoded, so will cache it...");
-      _loadUiImage();
-    } else if (widget.imageHolder.encoded) {
+    if (widget.imageHolder.decompressed) {
+      _cacheUiImage();
+    } else if (widget.imageHolder.compressed) {
       if (_memoryImageReady == false) {
-        print("$hashCode Waiting for PNG decode before discarding cache");
+        print(
+            "$hashCode Waiting for PNG decompression before discarding cache");
         _loadPng();
       }
     }
 
     super.didUpdateWidget(oldWidget);
+  }
+
+  void _cacheUiImage() {
+    setState(() {
+      _memoryImageReady = false;
+      _memoryImage = null;
+      _cachedImage = widget.imageHolder.uiImage;
+    });
   }
 
   void _loadPng() {
@@ -53,8 +61,8 @@ class _ImageDisplayState extends State<ImageDisplay> {
           ImageStreamListener(
             (imageInfo, synchronousCall) {
               final hashCode = widget.imageHolder.hashCode;
-              final stillNecessary =
-                  widget.imageHolder.encoded || widget.imageHolder.decoding;
+              final stillNecessary = widget.imageHolder.compressed ||
+                  widget.imageHolder.decompressing;
               if (mounted && stillNecessary) {
                 print("$hashCode PNG ready, discarding cache");
                 setState(() {
@@ -71,29 +79,13 @@ class _ImageDisplayState extends State<ImageDisplay> {
         );
   }
 
-  void _loadUiImage() {
-    widget.imageHolder.uiImage.then((image) {
-      final stillNecessary = widget.imageHolder.decoded ||
-          widget.imageHolder.encoding ||
-          !_memoryImageReady;
-      if (mounted && stillNecessary) {
-        setState(() {
-          _memoryImageReady = false;
-          _memoryImage = null;
-          _cachedImage = image;
-        });
-      }
-      print("$hashCode Cache updated");
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
         _buildImage(),
-        ..._buildDecodeEncodeStateText(
+        ..._buildCompressionStateText(
           context: context,
           imageHolder: widget.imageHolder,
         ),
@@ -122,27 +114,27 @@ class _ImageDisplayState extends State<ImageDisplay> {
     }
   }
 
-  List<Widget> _buildDecodeEncodeStateText({
+  List<Widget> _buildCompressionStateText({
     @required BuildContext context,
     @required ImageHolder imageHolder,
   }) {
     return [
-      if (imageHolder.decoded || imageHolder.decoding)
+      if (imageHolder.decompressed || imageHolder.decompressing)
         Padding(
           padding: const EdgeInsets.only(left: 8.0, top: 0),
           child: Text(
-            imageHolder.decoded ? "UNCOMPRESSED" : "UNCOMPRESSING",
+            imageHolder.decompressed ? "UNCOMPRESSED" : "UNCOMPRESSING",
             style: Theme.of(context)
                 .textTheme
                 .bodyText2
                 .copyWith(color: Colors.white),
           ),
         ),
-      if (imageHolder.encoded || imageHolder.encoding)
+      if (imageHolder.compressed || imageHolder.compressing)
         Padding(
           padding: const EdgeInsets.only(left: 8.0, top: 20),
           child: Text(
-            imageHolder.encoded ? "COMPRESSED" : "COMPRESSING",
+            imageHolder.compressed ? "COMPRESSED" : "COMPRESSING",
             style: Theme.of(context)
                 .textTheme
                 .bodyText2
@@ -164,10 +156,10 @@ class _ImageDisplayState extends State<ImageDisplay> {
   }
 }
 
-class ImageDisplayOnlyDecoded extends StatelessWidget {
+class ImageDisplayOnlyDecompressed extends StatelessWidget {
   final ui.Image image;
 
-  ImageDisplayOnlyDecoded({@required this.image});
+  ImageDisplayOnlyDecompressed({@required this.image});
 
   @override
   Widget build(BuildContext context) {

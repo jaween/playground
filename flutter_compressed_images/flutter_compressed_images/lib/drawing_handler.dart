@@ -72,3 +72,32 @@ class DrawingHandler {
         .toImage(image.width, image.height);
   }
 }
+
+class MyPainter extends CustomPainter {
+  final Image baseImage;
+  final Path path;
+  final Function onPicture;
+
+  MyPainter({
+    @required this.baseImage,
+    @required this.path,
+    @required this.onPicture,
+  });
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return true;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = PictureRecorder();
+    final c = Canvas(p);
+    canvas.drawImage(baseImage, Offset.zero, Paint());
+    c.drawPath(path, Paint());
+    final picture = p.endRecording();
+    onPicture(picture);
+
+    canvas.drawPicture(picture);
+  }
+}

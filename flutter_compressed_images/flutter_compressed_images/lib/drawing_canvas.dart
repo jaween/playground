@@ -18,67 +18,73 @@ class DrawingCanvas extends StatefulWidget {
 }
 
 class _DrawingCanvasState extends State<DrawingCanvas> {
-  ui.Image _image;
   DrawingHandler _handler;
+  ui.Image _image;
 
   @override
   void initState() {
-    onImageHolderChanged();
+    // widget.imageHolder.beginEditing().then((_) {
+    if (widget.imageHolder.uiImage != null) {
+      print("NEW IMAGE INIT");
+      setState(() =>  _image = widget.imageHolder.uiImage);
+      onImageHolderChanged();
+    }
+    //});
     super.initState();
   }
 
   @override
   void didUpdateWidget(DrawingCanvas oldWidget) {
-    if (oldWidget.imageHolder != widget.imageHolder) {
+    print("old image is ${oldWidget.imageHolder.uiImage}, image is ${widget.imageHolder.uiImage}");
+    if ((_image == null && widget.imageHolder.uiImage != null) || (oldWidget.imageHolder != widget.imageHolder)) {
+      print("NEW IMAGE");
+      setState(() =>  _image = widget.imageHolder.uiImage);
       onImageHolderChanged();
+      // });
     }
     super.didUpdateWidget(oldWidget);
   }
 
   void onImageHolderChanged() {
+    if (_image == null) {
+      return;
+    }
+    print("changed");
     final imageHolderAtStart = widget.imageHolder;
-    widget.imageHolder.uiImage.then((image) async {
-      // Image holder has since been changed, no need to use this decoded image
-      if (widget.imageHolder != imageHolderAtStart) {
-        return;
-      }
+    if (mounted) {
       setState(() {
-        _image = image;
         _handler = DrawingHandler(
-          image: image,
+          image: _image,
           onImageReady: (newImage) async {
-            // Image holder has since been changed, no need to use this drawing
+            // Image holder has since been changed, discard this drawing
             if (widget.imageHolder != imageHolderAtStart) {
               return;
             }
-            if (widget.imageHolder.decoded) {
+            if (widget.imageHolder.decompressed) {
               widget.onImageModified(newImage);
-              setState(() => _image = newImage);
+              setState(() {});
             }
           },
         );
       });
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      ignoring: !widget.imageHolder.decoded,
+      ignoring: !widget.imageHolder.decompressed || _image == null,
       child: Container(
         width: 200,
         height: 200,
-        color: _image == null ? Colors.grey : null,
-        child: _image == null
-            ? null
-            : GestureDetector(
-                onPanDown: (p) => _handler
-                    .start(p.localPosition / 200 * ImageHolder.size.width),
-                onPanUpdate: (p) => _handler
-                    .move(p.localPosition / 200 * ImageHolder.size.height),
-                onPanEnd: (d) => _handler.end(),
-                child: ImageDisplayOnlyDecoded(image: _image),
-              ),
+        child: GestureDetector(
+          onPanDown: (p) => _handler
+              .start(p.localPosition / 200 * widget.imageHolder.size.width),
+          onPanUpdate: (p) => _handler
+              .move(p.localPosition / 200 * widget.imageHolder.size.height),
+          onPanEnd: (d) => _handler.end(),
+          child: ImageDisplay(imageHolder: widget.imageHolder),
+        ),
       ),
     );
   }

@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compressed_images/image_display.dart';
@@ -42,11 +45,11 @@ class _ListScreenState extends State<ListScreen> {
   }
 
   Future<void> _addNewImageHolder() async {
-    final image = await ImageHolder.create();
+    final imageHolder = await _createImageHolder(width: 1500, height: 1500);
     if (mounted) {
       setState(() {
         _keys.add(GlobalKey());
-        _images.add(image);
+        _images.add(imageHolder);
       });
     }
   }
@@ -83,13 +86,15 @@ class _ListScreenState extends State<ListScreen> {
                         _selected = index;
                         _images[_selected]
                             .beginEditing()
-                            .then((_) => setState(() {
-                                  print("Editing ready");
-                                }));
+                            .then((_) {
+                              // TODO: This might be risky! prevSelected might be selected again at this point? Maybe just ensure _selected != prevSelected?
+                              setState(() {
+                                  _images[prevSelected]
+                                      .endEditing()
+                                      .then((_) => setState(() {}));
+                                });
+                            });
                       });
-                      _images[prevSelected]
-                          .endEditing()
-                          .then((_) => setState(() {}));
                     },
                     child: Container(
                       height: 100,
@@ -124,4 +129,34 @@ class _ListScreenState extends State<ListScreen> {
       ),
     );
   }
+}
+
+Future<ImageHolder> _createImageHolder({
+  @required int width,
+  @required int height,
+}) async {
+  final pictureRecorder = PictureRecorder();
+  final canvas = Canvas(pictureRecorder);
+  const colorList = [
+    Colors.orange,
+    Colors.blue,
+    Colors.pink,
+    Colors.purple,
+    Colors.green,
+    Colors.amber,
+    Colors.brown,
+    Colors.cyan,
+    Colors.lightGreen,
+    Colors.lightBlue
+  ];
+  final random = Random();
+  final index = random.nextInt(colorList.length);
+  canvas.drawColor(colorList[index], BlendMode.color);
+  final picture = pictureRecorder.endRecording();
+  final image = await picture.toImage(width, height);
+  final pngBytes = await image.toByteData(format: ImageByteFormat.png);
+  return ImageHolder(
+    size: Size(width.toDouble(), height.toDouble()),
+    pngBytes: pngBytes.buffer.asUint8List(),
+  );
 }

@@ -1,158 +1,146 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'dart:ui' as ui;
 
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 
+/// Contains the image data that is stored as a PNG (compressed) for reduced
+/// memory usage and viewing, or as raw ARGB values (decompressed) for editing.
+///
+/// While decompressed, the compressed PNG data is still available.
 class ImageHolder {
-  static const size = Size(1500, 1500);
-
+  Size _size;
   Uint8List _pngBytes;
-  ui.Image _image;
-  CancelableCompleter<ui.Image> _decodeCompleter;
-  CancelableCompleter<Uint8List> _encodeCompleter;
+  Image _image;
   bool _dirty = false;
 
-  ImageHolder._({@required Uint8List pngBytes}) : _pngBytes = pngBytes {
-    _encodeCompleter = CancelableCompleter<Uint8List>();
-    _encodeCompleter.complete(_pngBytes);
+  _CompressionState _state = _CompressionState.compressed;
+  CancelableCompleter<Image> _decompressCompleter;
+  CancelableCompleter<Uint8List> _compressCompleter;
+
+  ImageHolder({
+    @required Size size,
+    @required Uint8List pngBytes,
+  })  : _size = size,
+        _pngBytes = pngBytes {
+    _compressCompleter = CancelableCompleter<Uint8List>();
+    _compressCompleter.complete(_pngBytes);
   }
 
-  static Future<ImageHolder> create() async {
-    final pictureRecorder = PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-    const colorList = [
-      Colors.orange,
-      Colors.blue,
-      Colors.pink,
-      Colors.purple,
-      Colors.green,
-      Colors.amber,
-      Colors.brown,
-      Colors.cyan,
-      Colors.lightGreen,
-      Colors.lightBlue
-    ];
-    final random = Random();
-    final index = random.nextInt(colorList.length);
-    canvas.drawColor(colorList[index], BlendMode.color);
-    final picture = pictureRecorder.endRecording();
-    final image = await picture.toImage(
-      size.width.toInt(),
-      size.height.toInt(),
-    );
-    final bytes = await image.toByteData(format: ImageByteFormat.png);
-
-    return ImageHolder._(pngBytes: bytes.buffer.asUint8List());
-  }
-
-  Future<void> createImage({@required VoidCallback onImageReady}) async {
-    onImageReady();
-  }
+  Size get size => _size;
 
   bool get dirty => _dirty;
 
-  _ImgState _state = _ImgState.encoded;
+  bool get decompressed => _state == _CompressionState.decompressed;
 
-  bool get decoded => _state == _ImgState.decoded;
+  bool get decompressing => _state == _CompressionState.decompressing;
 
-  bool get decoding => _state == _ImgState.decoding;
+  bool get compressed => _state == _CompressionState.compressed;
 
-  bool get encoded => _state == _ImgState.encoded;
-
-  bool get encoding => _state == _ImgState.encoding;
+  bool get compressing => _state == _CompressionState.compressing;
 
   Uint8List get pngBytes => _pngBytes;
 
-  Future<ui.Image> get uiImage =>
-      _decodeCompleter?.operation?.value ?? Future.value(_image);
+  Image get uiImage => _image;
 
+  /// Decompresses the image if it isn't already. Access the ARGB values via
+  /// [uiImage].
   Future<void> beginEditing() {
-    if (_state == _ImgState.encoding) {
+    if (_state == _CompressionState.compressing) {
       // Quick exit
-      _encodeCompleter?.operation?.cancel();
-      _decodeCompleter = CancelableCompleter<ui.Image>();
-      _state = _ImgState.decoded;
-      _decodeCompleter.complete(_image);
-      return _decodeCompleter.operation.value;
-    } else if (_state == _ImgState.decoded || _state == _ImgState.decoding) {
-      return _decodeCompleter.operation.value;
+      _compressCompleter?.operation?.cancel();
+      _decompressCompleter = CancelableCompleter<Image>();
+      _state = _CompressionState.decompressed;
+      _decompressCompleter.complete(_image);
+      return _decompressCompleter.operation.value;
+    } else if (_state == _CompressionState.decompressed ||
+        _state == _CompressionState.decompressing) {
+      return _decompressCompleter.operation.value;
     }
 
-    final completer = CancelableCompleter<ui.Image>();
-    _decodeCompleter = completer;
+    final completer = CancelableCompleter<Image>();
+    _decompressCompleter = completer;
     _begin(completer);
-    return _decodeCompleter.operation.value;
+    return _decompressCompleter.operation.value;
   }
 
-  void _begin(CancelableCompleter<ui.Image> completer) async {
-    _state = _ImgState.decoding;
+  void _begin(CancelableCompleter<Image> completer) async {
+    _state = _CompressionState.decompressing;
     final codec = await instantiateImageCodec(_pngBytes);
     final frame = await codec.getNextFrame();
 
     if (!completer.isCanceled) {
       _image = frame.image;
-      _state = _ImgState.decoded;
+      _state = _CompressionState.decompressed;
       completer.complete(_image);
     }
   }
 
+  /// Compresses the image if the drawing is decompressed and has been edited
+  /// (is [dirty]). Access the PNG bytes via [pngBytes].
   Future<void> endEditing() {
-    if (_state == _ImgState.decoding) {
+    if (_state == _CompressionState.decompressing) {
       // Quick exit
-      _decodeCompleter?.operation?.cancel();
-      _encodeCompleter = CancelableCompleter<Uint8List>();
-      _state = _ImgState.encoded;
-      _encodeCompleter.complete(_pngBytes);
-      return _encodeCompleter.operation.value;
-    } else if (_state == _ImgState.encoded || _state == _ImgState.encoding) {
-      return _encodeCompleter.operation.value;
+      _decompressCompleter?.operation?.cancel();
+      _compressCompleter = CancelableCompleter<Uint8List>();
+      _state = _CompressionState.compressed;
+      _compressCompleter.complete(_pngBytes);
+      return _compressCompleter.operation.value;
+    } else if (_state == _CompressionState.compressed ||
+        _state == _CompressionState.compressing) {
+      return _compressCompleter.operation.value;
     }
 
     final completer = CancelableCompleter<Uint8List>();
-    _encodeCompleter = completer;
+    _compressCompleter = completer;
     _end(completer);
-    return _encodeCompleter.operation.value;
+    return _compressCompleter.operation.value;
   }
 
   void _end(CancelableCompleter<Uint8List> completer) async {
-    _state = _ImgState.encoding;
+    _state = _CompressionState.compressing;
     if (dirty) {
       final pngByteData = await _image.toByteData(format: ImageByteFormat.png);
       if (!completer.isCanceled) {
         _pngBytes = pngByteData.buffer.asUint8List();
+        _image = null;
         _dirty = false;
-        _state = _ImgState.encoded;
+        _state = _CompressionState.compressed;
 
         completer.complete(_pngBytes);
       }
     } else {
-      _state = _ImgState.encoded;
+      _state = _CompressionState.compressed;
       completer.complete(_pngBytes);
     }
   }
 
-  void edited({@required ui.Image edited}) async {
-    if (_state != _ImgState.decoded) {
-      assert(false, 'Not decdoded!');
+  /// Update the image when it is in the uncompressed state.
+  void edited({@required Image edited}) async {
+    if (_state != _CompressionState.decompressed) {
+      assert(false, 'Not ready for editing, currently is $_state!');
       return;
+    }
+
+    if (edited.width != size.width || edited.height != size.height) {
+      assert(
+        false,
+        'Edited size of ${edited.width}x${edited.height} is not image size of $size',
+      );
     }
 
     _image = edited;
     _dirty = true;
 
-    _decodeCompleter = CancelableCompleter<ui.Image>();
-    _decodeCompleter.complete(edited);
+    _decompressCompleter = CancelableCompleter<Image>();
+    _decompressCompleter.complete(edited);
   }
 }
 
-enum _ImgState {
-  encoded,
-  encoding,
-  decoded,
-  decoding,
+enum _CompressionState {
+  compressed,
+  compressing,
+  decompressed,
+  decompressing,
 }
