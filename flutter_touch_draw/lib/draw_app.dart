@@ -103,7 +103,8 @@ class DrawingPainter extends CustomPainter {
 
       final minDimension = min(size.width, size.height);
       final dst = Offset.zero & Size(minDimension, minDimension);
-      canvas.drawImageRect(image, src, dst, Paint());
+      canvas.drawImageRect(
+          image, src, dst, Paint()..filterQuality = FilterQuality.none);
     }
   }
 }
