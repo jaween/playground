@@ -1,0 +1,5 @@
+name: dart_rxdart
+description: RxDart practice
+
+dependencies:
+ rxdart: ^0.24.1
