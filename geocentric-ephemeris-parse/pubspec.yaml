@@ -1,0 +1,4 @@
+name: geocentry_ephemeris_parse_html
+author: Jaween Ediriweera
+dependencies:
+  html: ^0.14.0+3
