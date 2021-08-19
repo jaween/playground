@@ -12,4 +12,6 @@ COPY . .
 
 EXPOSE 8000
 
+ENV DEV_GOOGLE_APPLICATION_CREDENTIALS=/app/data/firebase-adminsdk-credentials.json
+
 CMD ["npm", "start"]
