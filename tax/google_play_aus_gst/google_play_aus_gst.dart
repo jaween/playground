@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:csv/csv.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
 void main(List<String> arguments) async {
@@ -10,7 +9,7 @@ void main(List<String> arguments) async {
   final items = await dir
       .list()
       .where((e) => e is File)
-      .map<File>((f) => f)
+      .map<File>((f) => f as File)
       .where((f) => path.extension(f.path) == '.csv')
       .asyncMap((f) => f.readAsString())
       .map<List<Item>>((csv) => _parseCsv(csv))
@@ -64,11 +63,11 @@ class Item {
   final int amount;
 
   Item({
-    @required this.id,
-    @required this.date,
-    @required this.refund,
-    @required this.country,
-    @required this.amount,
+    required this.id,
+    required this.date,
+    required this.refund,
+    required this.country,
+    required this.amount,
   });
 
   @override

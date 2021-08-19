@@ -1,7 +1,10 @@
 name: google_play_aus_gst
 description: Calculate GST that needs to be remitted to the ATO on Australian Google Play sales
 version: 1.0.0
+
+environment:
+  sdk: '>=2.13.0 <3.0.0'
+  
 dependencies:
   path: ^1.7.0
-  meta: ^1.2.3
   csv: ^4.0.3

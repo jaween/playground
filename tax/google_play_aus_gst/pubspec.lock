@@ -7,20 +7,13 @@ packages:
       name: csv
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "4.0.3"
-  meta:
-    dependency: "direct main"
-    description:
-      name: meta
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.2.3"
+    version: "5.0.0"
   path:
     dependency: "direct main"
     description:
       name: path
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.7.0"
+    version: "1.8.0"
 sdks:
-  dart: ">=2.0.0 <3.0.0"
+  dart: ">=2.13.0 <3.0.0"
