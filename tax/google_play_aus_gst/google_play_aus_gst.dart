@@ -4,6 +4,11 @@ import 'package:csv/csv.dart';
 import 'package:path/path.dart' as path;
 
 void main(List<String> arguments) async {
+  if (arguments.isEmpty) {
+    print('Usage \'dart google_play_aus_gst.dart DIRECTORY\'');
+    return;
+  }
+	
   final dirPath = arguments.first;
   final dir = Directory(dirPath);
   final items = await dir
