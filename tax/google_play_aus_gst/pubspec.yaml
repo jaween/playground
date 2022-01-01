@@ -3,8 +3,10 @@ description: Calculate GST that needs to be remitted to the ATO on Australian Go
 version: 1.0.0
 
 environment:
-  sdk: '>=2.13.0 <3.0.0'
+  sdk: '>=2.15.1 <3.0.0'
   
 dependencies:
   path: ^1.7.0
-  csv: ^4.0.3
+  csv: ^5.0.0
+  intl: ^0.17.0
+
